@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.DS_Store
+.env
+.env.test
+.envrc
+.nyc_output
+*.tsbuildinfo
+dist/
+build/
+coverage/
+npm-debug.log*
+.vscode/
+*.log
