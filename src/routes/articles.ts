@@ -21,11 +21,11 @@ app
       const articleId = Number(c.req.param('articleId'));
       const db = getDatabase();
       const [article] = await db.select().from(articles).where(eq(articles.id, articleId));
-      
+
       if (!article) {
         return c.json({ error: 'Article not found' }, 404);
       }
-      
+
       return c.json(article);
     } catch (error) {
       return c.json({ error: 'Failed to fetch article' }, 500);
@@ -35,7 +35,7 @@ app
     try {
       const { title, shortDescription, description } = await c.req.json();
       const db = getDatabase();
-      
+
       const [result] = await db.insert(articles).values({
         title,
         shortDescription,
@@ -99,4 +99,4 @@ app
     }
   });
 
-export default app; 
+export default app;

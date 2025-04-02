@@ -33,7 +33,7 @@ app
       const token = jwt.sign(
         { userId: result.insertId },
         process.env.JWT_SECRET || 'default-secret',
-        { expiresIn: '24h' }
+        { expiresIn: '24h' },
       );
 
       return c.json({
@@ -68,11 +68,9 @@ app
       }
 
       // Generate token
-      const token = jwt.sign(
-        { userId: user.id },
-        process.env.JWT_SECRET || 'default-secret',
-        { expiresIn: '24h' }
-      );
+      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'default-secret', {
+        expiresIn: '24h',
+      });
 
       return c.json({
         message: 'Login successful',
@@ -87,4 +85,4 @@ app
     }
   });
 
-export default app; 
+export default app;

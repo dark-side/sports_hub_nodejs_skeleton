@@ -8,9 +8,9 @@ let db: ReturnType<typeof drizzle>;
 export const initializeDatabase = async () => {
   try {
     // Create the connection
-	if (!process.env.DATABASE_URL) {
-		throw new Error('DATABASE_URL is not set');
-	}
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL is not set');
+    }
     const connection = await mysql.createConnection(process.env.DATABASE_URL);
 
     // Create the database instance
@@ -31,4 +31,4 @@ export const getDatabase = () => {
     throw new Error('Database not initialized. Call initializeDatabase first.');
   }
   return db;
-}; 
+};

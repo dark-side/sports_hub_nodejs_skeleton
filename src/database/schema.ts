@@ -62,4 +62,4 @@ export const commentsIndexes = {
 
 export const likesIndexes = {
   likeableIndex: index('likeable_index').on(likes.likeableType, likes.likeableId),
-}; 
+};
