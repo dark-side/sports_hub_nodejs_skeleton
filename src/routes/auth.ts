@@ -1,88 +1,96 @@
-import { Hono } from 'hono';
+import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getDatabase } from '../database/config';
-import { users } from '../models/schema';
+import { users } from '../database/schema';
 import { eq } from 'drizzle-orm';
 
-const app = new Hono();
+const router = express.Router();
 
-app
-  .post('/register', async (c) => {
-    try {
-      const { email, password } = await c.req.json();
-      const db = getDatabase();
+// Register
+router.post('/register', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+    const db = getDatabase();
 
-      // Check if user exists
-      const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    // Check if user exists
+    const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
-      if (existingUser.length > 0) {
-        return c.json({ error: 'User already exists' }, 400);
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create user
-      const [result] = await db.insert(users).values({
-        email,
-        encryptedPassword: hashedPassword,
-      });
-
-      // Generate token
-      const token = jwt.sign(
-        { userId: result.insertId },
-        process.env.JWT_SECRET || 'default-secret',
-        { expiresIn: '24h' },
-      );
-
-      return c.json({
-        message: 'User registered successfully',
-        token,
-        user: {
-          id: result.insertId,
-          email,
-        },
-      });
-    } catch (error) {
-      return c.json({ error: 'Registration failed' }, 500);
+    if (existingUser.length > 0) {
+      res.status(400).json({ error: 'User already exists' });
+      return;
     }
-  })
-  .post('/login', async (c) => {
-    try {
-      const { email, password } = await c.req.json();
-      const db = getDatabase();
 
-      // Find user
-      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      if (!user) {
-        return c.json({ error: 'Invalid credentials' }, 401);
-      }
+    // Create user
+    const [result] = await db.insert(users).values({
+      email,
+      encryptedPassword: hashedPassword,
+    });
 
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, user.encryptedPassword);
+    // Get created user
+    const [user] = await db.select().from(users).where(eq(users.id, result.insertId));
 
-      if (!isValidPassword) {
-        return c.json({ error: 'Invalid credentials' }, 401);
-      }
+    // Generate JWT token
+    const jwtId = Date.now().toString();
+    const jwtPayload = { userId: user.id, email: user.email, jti: jwtId };
+    const secretKey = process.env.JWT_SECRET || 'your-secret-key';
+    const token = jwt.sign(jwtPayload, secretKey, { expiresIn: '24h' });
 
-      // Generate token
-      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'default-secret', {
-        expiresIn: '24h',
-      });
+    res.status(201).json({
+      user: {
+        id: user.id,
+        email: user.email,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Failed to register user' });
+  }
+});
 
-      return c.json({
-        message: 'Login successful',
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-        },
-      });
-    } catch (error) {
-      return c.json({ error: 'Login failed' }, 500);
+// Login
+router.post('/login', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, password } = req.body;
+    const db = getDatabase();
+
+    // Find user
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+
+    if (!user) {
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
     }
-  });
 
-export default app;
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, user.encryptedPassword);
+
+    if (!isPasswordValid) {
+      res.status(401).json({ error: 'Invalid credentials' });
+      return;
+    }
+
+    // Generate JWT token
+    const jwtId = Date.now().toString();
+    const jwtPayload = { userId: user.id, email: user.email, jti: jwtId };
+    const secretKey = process.env.JWT_SECRET || 'your-secret-key';
+    const token = jwt.sign(jwtPayload, secretKey, { expiresIn: '24h' });
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+export default router;
