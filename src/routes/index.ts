@@ -1,23 +1,11 @@
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
+import express from 'express';
 import authRoutes from './auth';
 import articleRoutes from './articles';
 
-const app = new Hono();
-
-// Global middleware
-app.use('*', logger());
-app.use('*', cors());
-
-// API routes group
-const api = new Hono();
+const router = express.Router();
 
 // Mount route groups
-api.route('/auth', authRoutes);
-api.route('/articles', articleRoutes);
+router.use('/auth', authRoutes);
+router.use('/articles', articleRoutes);
 
-// Mount all API routes under /api
-app.route('/api', api);
-
-export default app;
+export default router;
