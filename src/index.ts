@@ -2,9 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import { config } from 'dotenv';
 import { initializeDatabase } from './database/config';
-import articlesRoutes from './routes/articles';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
+import router from './routes/index';
 
 // Load environment variables
 config();
@@ -15,11 +15,6 @@ const port = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 app.use(cors());
-
-// Simple test route
-app.get('/', (req, res) => {
-  res.json({ message: 'API is running' });
-});
 
 // Debug routes
 app.use((req, res, next) => {
@@ -35,7 +30,7 @@ app.get('/swagger.json', (req, res) => {
 });
 
 // Routes
-app.use('/api/v1/articles', articlesRoutes);
+app.use(router);
 
 // Initialize database and start server
 initializeDatabase()
