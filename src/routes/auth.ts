@@ -35,12 +35,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
     // Generate JWT token
     const jwtId = Date.now().toString();
-    const secretKey = Buffer.from(process.env.JWT_SECRET || 'your-secret-key', 'utf8');
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, jti: jwtId },
-      secretKey,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-    );
+    const jwtPayload = { userId: user.id, email: user.email, jti: jwtId };
+    const secretKey = process.env.JWT_SECRET || 'your-secret-key';
+    const token = jwt.sign(jwtPayload, secretKey, { expiresIn: '24h' });
 
     res.status(201).json({
       user: {
@@ -79,12 +76,9 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     // Generate JWT token
     const jwtId = Date.now().toString();
-    const secretKey = Buffer.from(process.env.JWT_SECRET || 'your-secret-key', 'utf8');
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, jti: jwtId },
-      secretKey,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-    );
+    const jwtPayload = { userId: user.id, email: user.email, jti: jwtId };
+    const secretKey = process.env.JWT_SECRET || 'your-secret-key';
+    const token = jwt.sign(jwtPayload, secretKey, { expiresIn: '24h' });
 
     res.json({
       user: {

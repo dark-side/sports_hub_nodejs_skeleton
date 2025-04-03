@@ -338,9 +338,7 @@ router.delete('/:articleId', async (req: Request, res: Response): Promise<void> 
     const articleId = Number(req.params.articleId);
     const db = getDatabase();
 
-    const [result] = await db
-      .delete(articles)
-      .where(eq(articles.id, articleId));
+    const [result] = await db.delete(articles).where(eq(articles.id, articleId));
 
     if (!result.affectedRows) {
       res.status(404).json({ error: 'Article not found' });

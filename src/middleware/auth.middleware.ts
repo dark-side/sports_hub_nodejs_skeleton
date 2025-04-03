@@ -10,7 +10,11 @@ interface JWTPayload extends jwt.JwtPayload {
   jti: string;
 }
 
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const authMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 

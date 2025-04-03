@@ -41,7 +41,7 @@ app.use('/api/v1/articles', articlesRoutes);
 initializeDatabase()
   .then(() => {
     console.log('Database connection established successfully');
-    
+
     // Start server
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
