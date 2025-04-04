@@ -2,8 +2,7 @@ import express, { Request, Response } from 'express';
 import { getDatabase } from '../database/config';
 import { articles } from '../database/schema';
 import { eq } from 'drizzle-orm';
-// Import commented out for now
-// import { authMiddleware } from '../middleware/auth.middleware';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = express.Router();
 
@@ -129,7 +128,7 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post('/', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { title, shortDescription, description } = req.body;
     const db = getDatabase();
@@ -197,86 +196,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.patch('/:articleId', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const articleId = Number(req.params.articleId);
-    const { title, shortDescription, description } = req.body;
-    const db = getDatabase();
-
-    const [result] = await db
-      .update(articles)
-      .set({
-        title,
-        shortDescription,
-        description,
-      })
-      .where(eq(articles.id, articleId));
-
-    if (!result.affectedRows) {
-      res.status(404).json({ error: 'Article not found' });
-      return;
-    }
-
-    const [article] = await db.select().from(articles).where(eq(articles.id, articleId));
-    res.json(article);
-  } catch (error) {
-    console.error('Error updating article:', error);
-    res.status(500).json({ error: 'Failed to update article' });
-  }
-});
-
-/**
- * @swagger
- * /articles/{articleId}:
- *   put:
- *     summary: Replace an article
- *     tags: [Articles]
- *     parameters:
- *       - in: path
- *         name: articleId
- *         schema:
- *           type: integer
- *         required: true
- *         description: The article ID
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - title
- *             properties:
- *               title:
- *                 type: string
- *                 description: The article title
- *               shortDescription:
- *                 type: string
- *                 description: A short description of the article
- *               description:
- *                 type: string
- *                 description: The full article content
- *     responses:
- *       200:
- *         description: The article was updated
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Article'
- *       404:
- *         description: The article was not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.put('/:articleId', async (req: Request, res: Response): Promise<void> => {
+router.patch('/:articleId', authMiddleware,async (req: Request, res: Response): Promise<void> => {
   try {
     const articleId = Number(req.params.articleId);
     const { title, shortDescription, description } = req.body;
@@ -333,7 +253,7 @@ router.put('/:articleId', async (req: Request, res: Response): Promise<void> => 
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.delete('/:articleId', async (req: Request, res: Response): Promise<void> => {
+router.delete('/:articleId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const articleId = Number(req.params.articleId);
     const db = getDatabase();
