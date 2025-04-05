@@ -2,13 +2,23 @@ import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getDatabase } from '../database/config';
-import { users } from '../database/schema';
+import { users, jwtDenylist } from '../database/schema';
 import { eq } from 'drizzle-orm';
+import ms from 'ms';
+import { UUID, randomUUID as uuidv4 } from 'node:crypto';
 
 const router = express.Router();
 
+type IncomingJWT = {
+	userId: number,
+	email: string,
+	jti: UUID,
+	iat: number,
+	exp: number
+};
+
 // Register
-router.post('/register', async (req: Request, res: Response): Promise<void> => {
+router.post('/registrations', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
     const db = getDatabase();
@@ -33,18 +43,12 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     // Get created user
     const [user] = await db.select().from(users).where(eq(users.id, result.insertId));
 
-    // Generate JWT token
-    const jwtId = Date.now().toString();
-    const jwtPayload = { userId: user.id, email: user.email, jti: jwtId };
-    const secretKey = process.env.JWT_SECRET || 'your-secret-key';
-    const token = jwt.sign(jwtPayload, secretKey, { expiresIn: '24h' });
-
+	// registration does not send token
     res.status(201).json({
       user: {
         id: user.id,
         email: user.email,
       },
-      token,
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -53,7 +57,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 });
 
 // Login
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
+router.post('/sign_in', async (req: Request, res: Response): Promise<void> => {
+	// if you spam to this endpoint, it will create a lot of tokens
+	// adding a .userId to "jwtDenylist" table might be a good idea
   try {
     const { email, password } = req.body;
     const db = getDatabase();
@@ -62,7 +68,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const [user] = await db.select().from(users).where(eq(users.email, email));
 
     if (!user) {
-      res.status(401).json({ error: 'Invalid credentials' });
+      res.status(401).json({ error: 'Who are you?' });
       return;
     }
 
@@ -75,10 +81,24 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     // Generate JWT token
-    const jwtId = Date.now().toString();
-    const jwtPayload = { userId: user.id, email: user.email, jti: jwtId };
+	const expiresIn = Date.now() + ms('24h');
+    const jwtId = uuidv4();
     const secretKey = process.env.JWT_SECRET || 'your-secret-key';
-    const token = jwt.sign(jwtPayload, secretKey, { expiresIn: '24h' });
+    const token = jwt.sign(
+		{
+			userId: user.id,
+			email: user.email,
+			jti: jwtId
+		},
+		secretKey,
+		{ expiresIn }
+	);
+
+	// save token to db
+	await db.insert(jwtDenylist).values({
+		jti: jwtId,
+		exp: new Date(expiresIn),
+	});
 
     res.json({
       user: {
@@ -91,6 +111,32 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Failed to login' });
   }
+});
+
+// Logout
+router.delete('/sign_out', async (req: Request, res: Response): Promise<void> => {
+	const requestToken = req.headers.authorization?.split(' ')[1];
+
+	if (!requestToken) {
+		res.status(401).json({ error: 'Already signed out' });
+		return;
+	}
+
+	const secretKey = process.env.JWT_SECRET || 'your-secret-key';
+	const decodedToken = jwt.verify(requestToken, secretKey) as IncomingJWT;
+
+	// check if token is in db
+	const db = getDatabase();
+	const [token] = await db.select().from(jwtDenylist).where(eq(jwtDenylist.jti, decodedToken.jti));
+
+  if (!token) {
+    res.status(401).json({ error: 'Malformed token' });
+  }
+
+  // delete token from db
+  await db.delete(jwtDenylist).where(eq(jwtDenylist.jti, decodedToken.jti));
+
+  res.status(200).json({ message: 'Signed out successfully' });
 });
 
 export default router;
