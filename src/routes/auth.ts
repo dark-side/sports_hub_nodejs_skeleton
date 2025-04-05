@@ -17,46 +17,65 @@ type IncomingJWT = {
 	exp: number;
 };
 
-// Register
-router.post('/registrations', async (req: Request, res: Response): Promise<void> => {
-	try {
-		const { email, password } = req.body;
-		const db = getDatabase();
-
-		// Check if user exists
-		const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
-
-		if (existingUser.length > 0) {
-			res.status(400).json({ error: 'User already exists' });
-			return;
-		}
-
-		// Hash password
-		const hashedPassword = await bcrypt.hash(password, 10);
-
-		// Create user
-		const [result] = await db.insert(users).values({
-			email,
-			encryptedPassword: hashedPassword,
-		});
-
-		// Get created user
-		const [user] = await db.select().from(users).where(eq(users.id, result.insertId));
-
-		// registration does not send token
-		res.status(201).json({
-			user: {
-				id: user.id,
-				email: user.email,
-			},
-		});
-	} catch (error) {
-		console.error('Registration error:', error);
-		res.status(500).json({ error: 'Failed to register user' });
-	}
-});
-
-// Login
+/**
+ * @swagger
+ * /auth/sign_in:
+ *   post:
+ *     summary: Login to the application
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       description: The email and password of the user
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: The email of the user
+ *               password:
+ *                 type: string
+ *                 description: The password of the user
+ *     responses:
+ *       200:
+ *         description: User logged in successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: number
+ *                     email:
+ *                       type: string
+ *                 token:
+ *                   type: string
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ */
 router.post('/sign_in', async (req: Request, res: Response): Promise<void> => {
 	// if you spam to this endpoint, it will create a lot of tokens
 	// adding a .userId to "jwtDenylist" table might be a good idea
@@ -113,7 +132,41 @@ router.post('/sign_in', async (req: Request, res: Response): Promise<void> => {
 	}
 });
 
-// Logout
+/**
+ * @swagger
+ * /auth/sign_out:
+ *   delete:
+ *     summary: Logout from the application
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: User logged out successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Already signed out
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ */
 router.delete('/sign_out', async (req: Request, res: Response): Promise<void> => {
 	const requestToken = req.headers.authorization?.split(' ')[1];
 
