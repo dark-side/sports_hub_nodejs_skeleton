@@ -196,7 +196,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.patch('/:articleId', authMiddleware,async (req: Request, res: Response): Promise<void> => {
+router.patch('/:articleId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const articleId = Number(req.params.articleId);
     const { title, shortDescription, description } = req.body;
