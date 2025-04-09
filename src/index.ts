@@ -15,6 +15,7 @@ const port = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 
+// Taken from Ruby project
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
