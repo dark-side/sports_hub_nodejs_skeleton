@@ -41,7 +41,7 @@ initializeDatabase()
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
       console.log(`API Documentation: http://localhost:${port}/api-docs`);
-      console.log(`Articles endpoint: http://localhost:${port}/api/v1/articles`);
+      console.log(`Articles endpoint: http://localhost:${port}/articles`);
     });
   })
   .catch((error) => {
