@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { getDatabase } from '../database/config';
-import { articles } from '../database/schema';
+import { articles, images } from '../database/schema';
 import { eq } from 'drizzle-orm';
 import { authMiddleware } from '../middleware/auth.middleware';
 
@@ -10,11 +10,11 @@ const router = express.Router();
  * @swagger
  * /articles:
  *   get:
- *     summary: Returns all articles
+ *     summary: Returns all articles with their associated images
  *     tags: [Articles]
  *     responses:
  *       200:
- *         description: The list of articles
+ *         description: The list of articles with image information
  *         content:
  *           application/json:
  *             schema:
@@ -31,7 +31,25 @@ const router = express.Router();
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const db = getDatabase();
-    const result = await db.select().from(articles);
+    // Query articles and join with images
+    const result = await db
+      .select({
+        id: articles.id,
+        title: articles.title,
+        shortDescription: articles.shortDescription,
+        description: articles.description,
+        imageId: articles.image_id,
+        createdAt: articles.createdAt,
+        updatedAt: articles.updatedAt,
+        image: {
+          id: images.id,
+          image: images.image,
+          imageAlt: images.imageAlt
+        }
+      })
+      .from(articles)
+      .leftJoin(images, eq(articles.image_id, images.id));
+    
     res.json(result);
   } catch (error) {
     console.error('Error fetching articles:', error);
@@ -43,7 +61,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
  * @swagger
  * /articles/{articleId}:
  *   get:
- *     summary: Get an article by ID
+ *     summary: Get an article by ID with its associated image
  *     tags: [Articles]
  *     parameters:
  *       - in: path
@@ -54,7 +72,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
  *         description: The article ID
  *     responses:
  *       200:
- *         description: The article details
+ *         description: The article details with image information
  *         content:
  *           application/json:
  *             schema:
@@ -76,7 +94,26 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
   try {
     const articleId = Number(req.params.articleId);
     const db = getDatabase();
-    const [article] = await db.select().from(articles).where(eq(articles.id, articleId));
+    
+    // Query article with its associated image
+    const [article] = await db
+      .select({
+        id: articles.id,
+        title: articles.title,
+        shortDescription: articles.shortDescription,
+        description: articles.description,
+        imageId: articles.image_id,
+        createdAt: articles.createdAt,
+        updatedAt: articles.updatedAt,
+        image: {
+          id: images.id,
+          image: images.image,
+          imageAlt: images.imageAlt
+        }
+      })
+      .from(articles)
+      .leftJoin(images, eq(articles.image_id, images.id))
+      .where(eq(articles.id, articleId));
 
     if (!article) {
       res.status(404).json({ error: 'Article not found' });
@@ -94,7 +131,7 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
  * @swagger
  * /articles:
  *   post:
- *     summary: Create a new article
+ *     summary: Create a new article with an image
  *     tags: [Articles]
  *     requestBody:
  *       required: true
@@ -122,7 +159,7 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
  *                 description: Alternative text for the image
  *     responses:
  *       201:
- *         description: The article was successfully created
+ *         description: The article was successfully created with its image
  *         content:
  *           application/json:
  *             schema:
@@ -138,17 +175,56 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
   try {
     const { title, shortDescription, description, image, imageAlt } = req.body;
     const db = getDatabase();
+    
+    // Use a transaction to ensure both image and article are created
+    db.transaction(async (tx) => {
+      let imageInsertId = null;
+      if (image && imageAlt) {
+        // Create the image
+        const [imageResult] = await tx.insert(images).values({
+          image,
+          imageAlt,
+        });
+        imageInsertId = imageResult.insertId;
+      } else {
+        if (image || imageAlt) {
+          console.error('Either specify image and imageAlt, or do not specify both');
+          res.status(400).json({ error: 'Either specify image and imageAlt, or do not specify both' });
+          return;
+        }
+      }
 
-    const [result] = await db.insert(articles).values({
-      title,
-      shortDescription,
-      description,
-      image,
-      imageAlt,
+    
+      // Then create the article with a reference to the image
+      const [articleResult] = await tx.insert(articles).values({
+        title,
+        shortDescription,
+        description,
+        image_id: imageInsertId,
+      });
+      
+      // Get the created article with its image
+      const [newArticle] = await tx
+        .select({
+          id: articles.id,
+          title: articles.title,
+          shortDescription: articles.shortDescription,
+          description: articles.description,
+          imageId: articles.image_id,
+          createdAt: articles.createdAt,
+          updatedAt: articles.updatedAt,
+          image: {
+            id: images.id,
+            image: images.image,
+            imageAlt: images.imageAlt
+          }
+        })
+        .from(articles)
+        .leftJoin(images, eq(articles.image_id, images.id))
+        .where(eq(articles.id, articleResult.insertId));
+      
+      res.status(201).json(newArticle);
     });
-
-    const [article] = await db.select().from(articles).where(eq(articles.id, result.insertId));
-    res.status(201).json(article);
   } catch (error) {
     console.error('Error creating article:', error);
     res.status(500).json({ error: 'Failed to create article' });
@@ -159,7 +235,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
  * @swagger
  * /articles/{articleId}:
  *   patch:
- *     summary: Update parts of an article
+ *     summary: Update parts of an article and its associated image
  *     tags: [Articles]
  *     parameters:
  *       - in: path
@@ -192,7 +268,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
  *                 description: Alternative text for the image
  *     responses:
  *       200:
- *         description: The article was updated
+ *         description: The article was updated with its image
  *         content:
  *           application/json:
  *             schema:
@@ -216,24 +292,82 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response):
     const { title, shortDescription, description, image, imageAlt } = req.body;
     const db = getDatabase();
 
-    const [result] = await db
-      .update(articles)
-      .set({
-        title,
-        shortDescription,
-        description,
-        image,
-        imageAlt,
-      })
+    // Find the article to get its image ID
+    const [existingArticle] = await db
+      .select()
+      .from(articles)
       .where(eq(articles.id, articleId));
-
-    if (!result.affectedRows) {
+      
+    if (!existingArticle) {
       res.status(404).json({ error: 'Article not found' });
       return;
     }
-
-    const [article] = await db.select().from(articles).where(eq(articles.id, articleId));
-    res.json(article);
+    
+    // Use transaction to update both article and image
+    db.transaction(async (tx) => {
+      if (title || shortDescription || description) {
+      // Update article
+      await tx
+        .update(articles)
+        .set({
+          title,
+          shortDescription,
+          description,
+        })
+        .where(eq(articles.id, articleId));
+      }
+      
+      // Update image if there's an associated image
+      if (existingArticle.image_id && (image || imageAlt)) {
+        const updateData: any = {};
+        if (image) updateData.image = image;
+        if (imageAlt) updateData.imageAlt = imageAlt;
+        
+        await tx
+          .update(images)
+          .set(updateData)
+          .where(eq(images.id, existingArticle.image_id));
+      }
+      // Create new image if there isn't one but image data was provided
+      else if (!existingArticle.image_id && (image || imageAlt)) {
+        const [imageResult] = await tx
+          .insert(images)
+          .values({
+            image,
+            imageAlt
+          });
+          
+        // Update article with new image ID
+        await tx
+          .update(articles)
+          .set({
+            image_id: imageResult.insertId
+          })
+          .where(eq(articles.id, articleId));
+      }
+      
+      // Get updated article with image
+      const [updatedArticle] = await tx
+        .select({
+          id: articles.id,
+          title: articles.title,
+          shortDescription: articles.shortDescription,
+          description: articles.description,
+          imageId: articles.image_id,
+          createdAt: articles.createdAt,
+          updatedAt: articles.updatedAt,
+          image: {
+            id: images.id,
+            image: images.image,
+            imageAlt: images.imageAlt
+          }
+        })
+        .from(articles)
+        .leftJoin(images, eq(articles.image_id, images.id))
+        .where(eq(articles.id, articleId));
+        
+      res.json(updatedArticle);
+    });
   } catch (error) {
     console.error('Error updating article:', error);
     res.status(500).json({ error: 'Failed to update article' });
@@ -244,7 +378,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response):
  * @swagger
  * /articles/{articleId}:
  *   delete:
- *     summary: Delete an article
+ *     summary: Delete an article and its associated image
  *     tags: [Articles]
  *     parameters:
  *       - in: path
@@ -255,7 +389,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response):
  *         description: The article ID
  *     responses:
  *       204:
- *         description: The article was deleted
+ *         description: The article and its image were deleted
  *       404:
  *         description: The article was not found
  *         content:
@@ -273,13 +407,28 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
   try {
     const articleId = Number(req.params.articleId);
     const db = getDatabase();
-
-    const [result] = await db.delete(articles).where(eq(articles.id, articleId));
-
-    if (!result.affectedRows) {
+    
+    // Find the article to get its image ID
+    const [existingArticle] = await db
+      .select()
+      .from(articles)
+      .where(eq(articles.id, articleId));
+      
+    if (!existingArticle) {
       res.status(404).json({ error: 'Article not found' });
       return;
     }
+    
+    // Use transaction to delete both article and image
+    db.transaction(async (tx) => {
+      // Delete article
+      await tx.delete(articles).where(eq(articles.id, articleId));
+      
+      // Delete associated image if exists
+      if (existingArticle.image_id) {
+        await tx.delete(images).where(eq(images.id, existingArticle.image_id));
+      }
+    });
 
     res.status(204).end();
   } catch (error) {
