@@ -3,7 +3,6 @@ import path from 'path';
 import { initializeDatabase } from '../config';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-import { saveArticlesSqlFile } from './utils';
 
 // Load environment variables
 dotenv.config();
@@ -15,10 +14,6 @@ async function seedDatabase() {
   console.log('Starting database seeding...');
   
   try {
-    // First, regenerate the articles SQL file with base64 images
-    console.log('Generating articles SQL with image data...');
-    await saveArticlesSqlFile();
-    
     // Initialize the database connection
     await initializeDatabase();
     
