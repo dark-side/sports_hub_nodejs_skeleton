@@ -27,10 +27,16 @@ export const articles = mysqlTable('articles', {
   title: varchar('title', { length: 255 }),
   shortDescription: varchar('short_description', { length: 255 }),
   description: text('description'),
-  image: longtext('image'),
-  imageAlt: varchar('image_alt', { length: 255 }),
+  image_id: bigint('image_id', { mode: 'number' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+});
+
+// Images table
+export const images = mysqlTable('images', {
+  id: bigint('id', { mode: 'number' }).primaryKey().autoincrement(),
+  image: longtext('image'),
+  imageAlt: varchar('image_alt', { length: 255 }),
 });
 
 // Comments table
