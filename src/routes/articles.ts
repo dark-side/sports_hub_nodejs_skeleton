@@ -131,8 +131,10 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
  * @swagger
  * /articles:
  *   post:
- *     summary: Create a new article with an image
+ *     summary: Create a new article with an optional image
  *     tags: [Articles]
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -153,10 +155,10 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
  *                 description: The full article content
  *               image:
  *                 type: string
- *                 description: Base64 encoded image data
+ *                 description: Base64 encoded image data (must be provided together with imageAlt)
  *               imageAlt:
  *                 type: string
- *                 description: Alternative text for the image
+ *                 description: Alternative text for the image (must be provided together with image)
  *     responses:
  *       201:
  *         description: The article was successfully created with its image
@@ -164,6 +166,18 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Article'
+ *       400:
+ *         description: Invalid input - image and imageAlt must be provided together
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Server error
  *         content:
@@ -237,6 +251,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
  *   patch:
  *     summary: Update parts of an article and its associated image
  *     tags: [Articles]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: articleId
@@ -253,19 +269,19 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
  *             properties:
  *               title:
  *                 type: string
- *                 description: The article title
+ *                 description: The article title (optional, updated only if provided)
  *               shortDescription:
  *                 type: string
- *                 description: A short description of the article
+ *                 description: A short description of the article (optional, updated only if provided)
  *               description:
  *                 type: string
- *                 description: The full article content
+ *                 description: The full article content (optional, updated only if provided)
  *               image:
  *                 type: string
- *                 description: Base64 encoded image data
+ *                 description: Base64 encoded image data (if article has no image, both image and imageAlt must be provided)
  *               imageAlt:
  *                 type: string
- *                 description: Alternative text for the image
+ *                 description: Alternative text for the image (if article has no image, both image and imageAlt must be provided)
  *     responses:
  *       200:
  *         description: The article was updated with its image
@@ -273,6 +289,12 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Article'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: The article was not found
  *         content:
@@ -380,6 +402,8 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response):
  *   delete:
  *     summary: Delete an article and its associated image
  *     tags: [Articles]
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: articleId
@@ -390,6 +414,12 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response):
  *     responses:
  *       204:
  *         description: The article and its image were deleted
+ *       401:
+ *         description: Unauthorized - authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  *       404:
  *         description: The article was not found
  *         content:
