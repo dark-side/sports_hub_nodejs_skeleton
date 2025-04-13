@@ -12,18 +12,29 @@ dotenv.config();
  */
 async function seedDatabase() {
   console.log('Starting database seeding...');
+  let connection;
+  let success = false;
   
   try {
     // Initialize the database connection
     await initializeDatabase();
     
     // Get direct MySQL connection to execute raw SQL
-    const connection = await mysql.createConnection(process.env.DATABASE_URL || '');
+    connection = await mysql.createConnection(process.env.DATABASE_URL || '');
     
     // Set session variables to handle large data
     await connection.query('SET SESSION net_read_timeout=120'); // 2 minutes
     await connection.query('SET SESSION net_write_timeout=120'); // 2 minutes
     await connection.query('SET SESSION wait_timeout=180'); // 3 minutes
+    
+    // Reset tables before seeding
+    console.log('Resetting tables before seeding...');
+    await connection.query('SET FOREIGN_KEY_CHECKS = 0;');
+    await connection.query('TRUNCATE TABLE articles;');
+    await connection.query('TRUNCATE TABLE likes;');
+    await connection.query('TRUNCATE TABLE comments;');
+    await connection.query('TRUNCATE TABLE images;');
+    await connection.query('SET FOREIGN_KEY_CHECKS = 1;');
     
     try {
       // Get all SQL files from the seeds directory
@@ -99,22 +110,27 @@ async function seedDatabase() {
           throw error;
         }
       }
+      
+      // If we get here, seeding was successful
+      success = true;
     } catch (sqlError) {
       console.error('Error executing SQL files:', sqlError);
-      
-      // Reset any partially applied seeds
-      await connection.query('SET FOREIGN_KEY_CHECKS = 0;');
-      await connection.query('TRUNCATE TABLE articles;');
-      await connection.query('TRUNCATE TABLE likes;');
-      await connection.query('TRUNCATE TABLE comments;');
-      await connection.query('SET FOREIGN_KEY_CHECKS = 1;');
+      success = false;
     }
     
-    console.log('Database seeding completed successfully!');
+    if (success) {
+      console.log('Database seeding completed successfully!');
+    } else {
+      console.error('Database seeding failed. Some data may be incomplete.');
+    }
+    
     await connection.end();
-    process.exit(0);
+    process.exit(success ? 0 : 1);
   } catch (error) {
     console.error('Error seeding database:', error);
+    if (connection) {
+      await connection.end();
+    }
     process.exit(1);
   }
 }
