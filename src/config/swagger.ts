@@ -18,11 +18,19 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: 'http://localhost:3000/api/v1',
+      url: 'http://localhost:3000',
       description: 'Development server',
     },
   ],
   components: {
+    securitySchemes: {
+      BearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Enter your JWT token in the format: Bearer {token}'
+      }
+    },
     schemas: {
       Article: {
         type: 'object',
@@ -44,6 +52,28 @@ const swaggerDefinition = {
             type: 'string',
             description: 'The full description of the article',
           },
+          imageId: {
+            type: 'integer',
+            description: 'Reference to the image ID in the images table',
+          },
+          image: {
+            type: 'object',
+            description: 'Image information associated with the article (included when fetching articles)',
+            properties: {
+              id: {
+                type: 'integer',
+                description: 'The image ID',
+              },
+              image: {
+                type: 'string',
+                description: 'Base64 encoded image data',
+              },
+              imageAlt: {
+                type: 'string',
+                description: 'Alternative text for the image',
+              }
+            }
+          },
           createdAt: {
             type: 'string',
             format: 'date-time',
@@ -60,9 +90,37 @@ const swaggerDefinition = {
           title: 'Sample Article',
           shortDescription: 'This is a sample article',
           description: 'This is the full description of the sample article.',
+          imageId: 1,
+          image: {
+            id: 1,
+            image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+            imageAlt: 'Sample image for the article'
+          },
           createdAt: '2025-04-03T04:30:00.000Z',
           updatedAt: '2025-04-03T04:30:00.000Z',
         },
+      },
+      Image: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'integer',
+            description: 'The auto-generated id of the image',
+          },
+          image: {
+            type: 'string',
+            description: 'Base64 encoded image data',
+          },
+          imageAlt: {
+            type: 'string',
+            description: 'Alternative text for the image',
+          },
+        },
+        example: {
+          id: 1,
+          image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+          imageAlt: 'Sample image'
+        }
       },
       Error: {
         type: 'object',
