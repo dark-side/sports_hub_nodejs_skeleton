@@ -44,12 +44,12 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
         image: {
           id: images.id,
           image: images.image,
-          imageAlt: images.imageAlt
-        }
+          imageAlt: images.imageAlt,
+        },
       })
       .from(articles)
       .leftJoin(images, eq(articles.image_id, images.id));
-    
+
     res.json(result);
   } catch (error) {
     console.error('Error fetching articles:', error);
@@ -94,7 +94,7 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
   try {
     const articleId = Number(req.params.articleId);
     const db = getDatabase();
-    
+
     // Query article with its associated image
     const [article] = await db
       .select({
@@ -108,8 +108,8 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
         image: {
           id: images.id,
           image: images.image,
-          imageAlt: images.imageAlt
-        }
+          imageAlt: images.imageAlt,
+        },
       })
       .from(articles)
       .leftJoin(images, eq(articles.image_id, images.id))
@@ -189,7 +189,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
   try {
     const { title, shortDescription, description, image, imageAlt } = req.body;
     const db = getDatabase();
-    
+
     // Use a transaction to ensure both image and article are created
     db.transaction(async (tx) => {
       let imageInsertId = null;
@@ -203,12 +203,13 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       } else {
         if (image || imageAlt) {
           console.error('Either specify image and imageAlt, or do not specify both');
-          res.status(400).json({ error: 'Either specify image and imageAlt, or do not specify both' });
+          res
+            .status(400)
+            .json({ error: 'Either specify image and imageAlt, or do not specify both' });
           return;
         }
       }
 
-    
       // Then create the article with a reference to the image
       const [articleResult] = await tx.insert(articles).values({
         title,
@@ -216,7 +217,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
         description,
         image_id: imageInsertId,
       });
-      
+
       // Get the created article with its image
       const [newArticle] = await tx
         .select({
@@ -230,13 +231,13 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
           image: {
             id: images.id,
             image: images.image,
-            imageAlt: images.imageAlt
-          }
+            imageAlt: images.imageAlt,
+          },
         })
         .from(articles)
         .leftJoin(images, eq(articles.image_id, images.id))
         .where(eq(articles.id, articleResult.insertId));
-      
+
       res.status(201).json(newArticle);
     });
   } catch (error) {
@@ -315,59 +316,51 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response):
     const db = getDatabase();
 
     // Find the article to get its image ID
-    const [existingArticle] = await db
-      .select()
-      .from(articles)
-      .where(eq(articles.id, articleId));
-      
+    const [existingArticle] = await db.select().from(articles).where(eq(articles.id, articleId));
+
     if (!existingArticle) {
       res.status(404).json({ error: 'Article not found' });
       return;
     }
-    
+
     // Use transaction to update both article and image
     db.transaction(async (tx) => {
       if (title || shortDescription || description) {
-      // Update article
-      await tx
-        .update(articles)
-        .set({
-          title,
-          shortDescription,
-          description,
-        })
-        .where(eq(articles.id, articleId));
+        // Update article
+        await tx
+          .update(articles)
+          .set({
+            title,
+            shortDescription,
+            description,
+          })
+          .where(eq(articles.id, articleId));
       }
-      
+
       // Update image if there's an associated image
       if (existingArticle.image_id && (image || imageAlt)) {
         const updateData: any = {};
         if (image) updateData.image = image;
         if (imageAlt) updateData.imageAlt = imageAlt;
-        
-        await tx
-          .update(images)
-          .set(updateData)
-          .where(eq(images.id, existingArticle.image_id));
+
+        await tx.update(images).set(updateData).where(eq(images.id, existingArticle.image_id));
       }
       // Create new image if there isn't one but image data was provided
       else if (!existingArticle.image_id && (image || imageAlt)) {
-        const [imageResult] = await tx
-          .insert(images)
-          .values({
-            image,
-            imageAlt
-          });
-          
+        const [imageResult] = await tx.insert(images).values({
+          image,
+          imageAlt,
+        });
+
         // Update article with new image ID
         await tx
           .update(articles)
           .set({
-            image_id: imageResult.insertId
+            image_id: imageResult.insertId,
           })
           .where(eq(articles.id, articleId));
       }
-      
+
       // Get updated article with image
       const [updatedArticle] = await tx
         .select({
@@ -381,13 +374,13 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response):
           image: {
             id: images.id,
             image: images.image,
-            imageAlt: images.imageAlt
-          }
+            imageAlt: images.imageAlt,
+          },
         })
         .from(articles)
         .leftJoin(images, eq(articles.image_id, images.id))
         .where(eq(articles.id, articleId));
-        
+
       res.json(updatedArticle);
     });
   } catch (error) {
@@ -437,23 +430,20 @@ router.delete('/:articleId', authMiddleware, async (req: Request, res: Response)
   try {
     const articleId = Number(req.params.articleId);
     const db = getDatabase();
-    
+
     // Find the article to get its image ID
-    const [existingArticle] = await db
-      .select()
-      .from(articles)
-      .where(eq(articles.id, articleId));
-      
+    const [existingArticle] = await db.select().from(articles).where(eq(articles.id, articleId));
+
     if (!existingArticle) {
       res.status(404).json({ error: 'Article not found' });
       return;
     }
-    
+
     // Use transaction to delete both article and image
     db.transaction(async (tx) => {
       // Delete article
       await tx.delete(articles).where(eq(articles.id, articleId));
-      
+
       // Delete associated image if exists
       if (existingArticle.image_id) {
         await tx.delete(images).where(eq(images.id, existingArticle.image_id));

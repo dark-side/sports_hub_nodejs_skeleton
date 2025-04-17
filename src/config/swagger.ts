@@ -28,8 +28,8 @@ const swaggerDefinition = {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Enter your JWT token in the format: Bearer {token}'
-      }
+        description: 'Enter your JWT token in the format: Bearer {token}',
+      },
     },
     schemas: {
       Article: {
@@ -58,7 +58,8 @@ const swaggerDefinition = {
           },
           image: {
             type: 'object',
-            description: 'Image information associated with the article (included when fetching articles)',
+            description:
+              'Image information associated with the article (included when fetching articles)',
             properties: {
               id: {
                 type: 'integer',
@@ -71,8 +72,8 @@ const swaggerDefinition = {
               imageAlt: {
                 type: 'string',
                 description: 'Alternative text for the image',
-              }
-            }
+              },
+            },
           },
           createdAt: {
             type: 'string',
@@ -93,8 +94,9 @@ const swaggerDefinition = {
           imageId: 1,
           image: {
             id: 1,
-            image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-            imageAlt: 'Sample image for the article'
+            image:
+              'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+            imageAlt: 'Sample image for the article',
           },
           createdAt: '2025-04-03T04:30:00.000Z',
           updatedAt: '2025-04-03T04:30:00.000Z',
@@ -118,9 +120,10 @@ const swaggerDefinition = {
         },
         example: {
           id: 1,
-          image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-          imageAlt: 'Sample image'
-        }
+          image:
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+          imageAlt: 'Sample image',
+        },
       },
       Error: {
         type: 'object',
