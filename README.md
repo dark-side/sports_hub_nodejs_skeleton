@@ -1,14 +1,14 @@
-# Sports-Hub Application Back-End
+# Sports-Hub Application Node.js Back-End
 
 ## Project Description
 
-This is a draft pet project for testing Generative AI on different software engineering tasks. It is planned to evolve and grow over time. Specifically, this repo will be a Node.JS playground. The application's legend is based on the sports-hub application description from the following repo: [Sports-Hub](https://github.com/dark-side/sports-hub).
+This is a draft pet project for testing Generative AI on different software engineering tasks. It is planned to evolve and grow over time. Specifically, this repo will be a Node.JS playground.
+
+The application's legend is based on the sports-hub application description from the following repo: [Sports-Hub](https://github.com/dark-side/sports-hub).
 
 ## Available Front-End applications
-- [React.js](https://github.com/rtriska/reactjs_fe_genai_plgrnd)
-- [Angular.js](https://github.com/rtriska/angularjs_fe_plgrnd)
-- [IOS](https://github.com/rtriska/ios_mob_plgrnd)
-- [Android](https://github.com/rtriska/android_mob_plgrnd)
+- [Angular.js](https://github.com/dark-side/sports_hub_angular_skeleton)
+- [React.js](https://github.com/dark-side/sports_hub_react_skeleton)
 
 ## Dependencies
 
@@ -16,25 +16,25 @@ This is a draft pet project for testing Generative AI on different software engi
 - Docker Compose
 
 The mentioned dependencies can be installed using the official documentation [here](https://docs.docker.com/compose/install/).
+[Podman](https://podman-desktop.io/docs/compose) can be used as an alternative to Docker.
 
 ## Setup and Running the Application
 
 ### Clone the Repositories
 
-To run the web application with the React front-end, clone the following repositories within the same folder:
+To run the web application with the Angular front-end, clone the following repositories within the same folder:
 
 ```sh
-git clone git@github.com:rtriska/nodejs_be_plgrnd.git
-git clone git@github.com:rtriska/reactjs_fe_genai_plgrnd.git
-git clone git@github.com:rkoruk/api_docs_genai_plgrnd.git
+git clone git@github.com:dark-side/sports_hub_nodejs_skeleton.git
+git clone git@github.com:dark-side/sports_hub_angular_skeleton.git
 ```
 
 ### Run Docker Compose
 
-Navigate to the back-end application directory and run:
+Navigate to the back-end application directory and run (`-d` for detached mode to run in the background):
 
 ```sh
-docker compose up
+docker compose up -d
 ```
 
 ### Attach to the Backend Container

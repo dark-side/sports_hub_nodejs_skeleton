@@ -6,10 +6,10 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3002:3002"
     environment:
       - NODE_ENV=development
-      - PORT=3000
+      - PORT=3002
       - DATABASE_URL=mysql://root:password@db:3306/nodejs_be_plgrnd
       - JWT_SECRET=your_jwt_secret_key
     depends_on:
@@ -31,6 +31,16 @@ services:
       - mysql_data:/var/lib/mysql
       - ./src/database/seeds:/docker-entrypoint-initdb.d
     restart: unless-stopped
+
+  angular_frontend:
+    build: ../sports_hub_angular_skeleton
+    depends_on:
+      - app
+    ports:
+      - 3000:3000
+    restart: always
+    environment:
+      NG_APP_API_URL: "http://localhost:3002/"
 
 volumes:
   mysql_data: 
