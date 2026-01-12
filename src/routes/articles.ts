@@ -8,7 +8,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /articles:
+ * /api/articles:
  *   get:
  *     summary: Returns all articles with their associated images
  *     tags: [Articles]
@@ -59,7 +59,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
 /**
  * @swagger
- * /articles/{articleId}:
+ * /api/articles/{articleId}:
  *   get:
  *     summary: Get an article by ID with its associated image
  *     tags: [Articles]
@@ -129,7 +129,7 @@ router.get('/:articleId', async (req: Request, res: Response): Promise<void> => 
 
 /**
  * @swagger
- * /articles:
+ * /api/articles:
  *   post:
  *     summary: Create a new article with an optional image
  *     tags: [Articles]
@@ -248,7 +248,133 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
 
 /**
  * @swagger
- * /articles/{articleId}:
+ * /api/articles/{articleId}:
+ *   put:
+ *     summary: Update an article (full update)
+ *     tags: [Articles]
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: articleId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The article ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 description: The article title
+ *               shortDescription:
+ *                 type: string
+ *                 description: A short description of the article
+ *               description:
+ *                 type: string
+ *                 description: The full article content
+ *               image:
+ *                 type: string
+ *                 description: Base64 encoded image data
+ *               imageAlt:
+ *                 type: string
+ *                 description: Alternative text for the image
+ *     responses:
+ *       200:
+ *         description: The article was updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Article'
+ *       401:
+ *         description: Unauthorized - authentication required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: The article was not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put('/:articleId', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const articleId = Number(req.params.articleId);
+    const { title, shortDescription, description, image, imageAlt } = req.body;
+    const db = getDatabase();
+
+    // Check if article exists
+    const [existingArticle] = await db.select().from(articles).where(eq(articles.id, articleId));
+    
+    if (!existingArticle) {
+      res.status(404).json({ error: 'Article not found' });
+      return;
+    }
+
+    // Full update (PUT requires all fields)
+    await db.update(articles)
+      .set({
+        title,
+        short_description: shortDescription || null,
+        description: description || null,
+        updated_at: new Date()
+      })
+      .where(eq(articles.id, articleId));
+
+    // Update image if provided
+    if (existingArticle.image_id && (image || imageAlt)) {
+      const updateData: any = {};
+      if (image) updateData.image = image;
+      if (imageAlt) updateData.imageAlt = imageAlt;
+      await db.update(images).set(updateData).where(eq(images.id, existingArticle.image_id));
+    } else if (!existingArticle.image_id && image && imageAlt) {
+      const [imageResult] = await db.insert(images).values({ image, imageAlt });
+      await db.update(articles).set({ image_id: imageResult.insertId }).where(eq(articles.id, articleId));
+    }
+
+    const [updatedArticle] = await db
+      .select({
+        id: articles.id,
+        title: articles.title,
+        shortDescription: articles.shortDescription,
+        description: articles.description,
+        imageId: articles.image_id,
+        createdAt: articles.createdAt,
+        updatedAt: articles.updatedAt,
+        image: {
+          id: images.id,
+          image: images.image,
+          imageAlt: images.imageAlt,
+        },
+      })
+      .from(articles)
+      .leftJoin(images, eq(articles.image_id, images.id))
+      .where(eq(articles.id, articleId));
+
+    res.status(200).json(updatedArticle);
+  } catch (error) {
+    console.error('Update article error:', error);
+    res.status(500).json({ error: 'Failed to update article' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/articles/{articleId}:
  *   patch:
  *     summary: Update parts of an article and its associated image
  *     tags: [Articles]
@@ -391,7 +517,7 @@ router.patch('/:articleId', authMiddleware, async (req: Request, res: Response):
 
 /**
  * @swagger
- * /articles/{articleId}:
+ * /api/articles/{articleId}:
  *   delete:
  *     summary: Delete an article and its associated image
  *     tags: [Articles]
